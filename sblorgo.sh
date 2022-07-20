@@ -15,14 +15,25 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+tput smcup
+clear
+
 version="0.1dev"
 
 server="irc.libera.chat"
-chan="#ff"
+if [ "$1" == "" ]; then
+	chan="#ff"
+else
+	chan="$1"
+fi
 path="$HOME/sblorgo/fifo/${server}/"
 prefix=":"
 
-printf "\n\
+# obviously change these!!!
+opers=("jornmann", "speedie", "gabubu", "mohamad")
+ophost=("user/jornmann", "user/speedie", "user/gabubu", "user/damaj301damaj")
+
+printf "\
       '||     '||\`\n\
        ||      ||  \n\
 (''''  ||''|,  ||  .|''|, '||''| .|''|, .|''|,\n\
@@ -34,7 +45,9 @@ printf "version: $version\n\n\
 server: $server\n\
 channel: $chan\n\
 path: $path\n\
-prefix: $prefix\n\n"
+prefix: $prefix\n\
+bot ops: $opers\n\
+op hosts: $ophost\n\n"
 
 send() {
 	printf "$1\n" >> "${path}${chan}/in"
@@ -45,7 +58,59 @@ nsend() {
 	export message="${message}$1"
 }
 
+log() {
+	i=0
+	for o in "${opers[@]}"; do
+		o="$(echo $o | sed 's/,//g')"
+		echo "/WHO $o" >> "${path}/in"
+		sleep 0.5
+		h="$(echo ${ophost[$i]} | sed 's/,//g')"
+		host="$(tail -n 2 ${path}/out | grep -v 'End of /WHO list.' | awk '{ print $4 }')"
+		if [ "$host" = $h ]; then
+			printf "/j $(echo $o | sed 's/,//g') sendops: $1\n" >> "${path}/in"
+			printf "\e[34m[privsent -> $o]\e[0m $1\n"
+		else
+			printf "\e[31m[WARNING] $o: $host AND $h DO NOT MATCH!\e[0m\n"
+		fi
+		i=$((i+1))
+		sleep 0.5
+	done
+}
+
+hostcheck() {
+	i=0
+	for x in "${opers[@]}"; do
+		x=$(echo $x | sed 's/,//g')
+		if [ "$1" = "$x" ]; then
+			echo "/WHO $1" >> "${path}/in"
+			sleep 0.5
+			h="$(echo ${ophost[$i]} | sed 's/,//g')"
+			host="$(tail -n 2 ${path}/out | grep -v 'End of /WHO list.' | awk '{ print $4 }')"
+			if [ "$host" = "$h" ]; then
+				return 0
+			else
+				printf "\e[31m[WARNING] $o: $host AND $h DO NOT MATCH!\e[0m\n"
+				return 1
+			fi
+		else
+			[ "$i" = "$((${#opers[@]} - 1))" ] && return 1
+		fi
+		i=$((i+1))
+	done
+}
+
+quit() {
+	send "Quitting. Reason: $1"
+	tput rmcup
+	exit 0
+}
+
 echo "/j $chan" >> "${path}/in" && printf "\e[34m[sys]\e[39m joined $chan\n"
+
+#trap 'tput rmcup' SIGINT
+trap 'quit "Recieved SIGINT."' SIGINT
+
+send "sblorgo initialized!"
 
 tail -n 1 -f "${path}${chan}/out" | while read -r line; do
 	cmd=$(printf '%s\n' "$line" | cut -d ' ' -f 3)
@@ -53,6 +118,11 @@ tail -n 1 -f "${path}${chan}/out" | while read -r line; do
 	if [ "$name" = "jorngirl" ]; then
 		if [ "${cmd:0:1}" = "${prefix}" ]; then
 			send "Fuck off."
+			cmd="poop"
+		fi
+	fi
+	if [ "$name" = "sblorgo" ]; then
+		if [ "${cmd:0:1}" = "${prefix}" ]; then
 			cmd="poop"
 		fi
 	fi
@@ -78,7 +148,7 @@ tail -n 1 -f "${path}${chan}/out" | while read -r line; do
 			send "$name: $(uptime -p)"
 		;;
 		"${prefix}about")
-			send "$name: sblorgo ${version}\nwritten by jornmann for #ff\n"
+			send "$name: sblorgo ${version}, written by jornmann for #ff"
 		;;
 		"${prefix}rr")
 			if (("$RANDOM % 6 + 1" == "1")); then
@@ -98,15 +168,17 @@ tail -n 1 -f "${path}${chan}/out" | while read -r line; do
 		"${prefix}dice")
 			send "$name rolled a $((RANDOM % 6 + 1))."
 		;;
+		"${prefix}ops")
+				send "$name: oplist: ${opers[*]}"
+				send "$name: hosts: ${ophost[*]}"
+		;;
 		"${prefix}help")
-			send "$name: commands: coffee, tea, fortune, uptime, about, rr, coinflip, dice, uname, time, penis, hey, ping, test, 8ball, grep, help"
+			send "$name: commands: coffee, tea, fortune, uptime, about, rr, coinflip, dice, uname, time, penis, hey, ping, test, 8ball, grep, op, deop, voice, devoice, help"
 		;;
 		"${prefix}penis")
 			arg=$(printf '%s\n' "$line" | cut -d ' ' -f 4-)
 			length="$(($RANDOM % 16))"
 			[ "$arg" = "" ] && export message="${name}'s penis: c" || export message="${name}: ${arg}'s penis: c"
-			# I know this is a shitty way to do it, but it works.
-			# TODO: Make this not terrible!
 			case "$length" in
 				"1") nsend "=" ;;
 				"2") nsend "==" ;;
@@ -140,6 +212,11 @@ tail -n 1 -f "${path}${chan}/out" | while read -r line; do
 		;;
 		"${prefix}ping")
 			send "$name: Pong!"
+		;;
+		"${prefix}wgrep")
+			arg=$(printf '%s\n' "$line" | cut -d ' ' -f 4-)
+			results=$(grep "$arg" "${path}${chan}/out" | wc -l)
+			[ "$arg" = "" ] && send "$name: $results messages in backlog." || send "$name: Found '$arg' in $results message(s)."
 		;;
 		"${prefix}test")
 			arg=$(printf '%s\n' "$line" | cut -d ' ' -f 4-)
@@ -183,6 +260,51 @@ tail -n 1 -f "${path}${chan}/out" | while read -r line; do
 			[ "$results" = "" ] \
 				&& send "$name: no results for '$arg'" \
 				|| send "$name: $results"
+		;;
+		"${prefix}sendops")
+			arg=$(printf '%s\n' "$line" | cut -d ' ' -f 4-)
+			log "$arg"
+			send "$name: Sent."
+		;;
+		"${prefix}op")
+			hostcheck "$name"
+			if [ $? -eq 0 ]; then
+				echo "/j chanserv op ${chan} $name" >> "${path}/in"
+			else
+				send "$name is not in the sudoers file. This incident will be reported."
+			fi
+		;;
+		"${prefix}deop")
+			hostcheck "$name"
+			if [ $? -eq 0 ]; then
+				echo "/j chanserv deop ${chan} $name" >> "${path}/in"
+			else
+				send "$name is not in the sudoers file. This incident will be reported."
+			fi
+		;;
+		"${prefix}voice")
+			hostcheck "$name"
+			if [ $? -eq 0 ]; then
+				echo "/j chanserv voice ${chan} $name" >> "${path}/in"
+			else
+				send "$name is not in the sudoers file. This incident will be reported."
+			fi
+		;;
+		"${prefix}devoice")
+			hostcheck "$name"
+			if [ $? -eq 0 ]; then
+				echo "/j chanserv devoice ${chan} $name" >> "${path}/in"
+			else
+				send "$name is not in the sudoers file. This incident will be reported."
+			fi
+		;;
+		"${prefix}q")
+			hostcheck "$name"
+			if [ $? -eq 0 ]; then
+				send "/l Recieved 'q' command from $name."
+			else
+				send "$name is not in the sudoers file. This incident will be reported."
+			fi
 		;;
 	esac
 done
