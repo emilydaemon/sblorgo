@@ -53,6 +53,8 @@ ping - pong.
 test <condition> - see if argument is true.
 8ball <query> - ask the oh so wise 8-ball.
 grep <text> - search channel logs for text.
+wgrep <text> - see word count for text.
+sendops <text> - send a message to bot ops.
 op - op yourself if you're permitted to.
 deop - same as above, but it's the opposite.
 voice - voice yourself if you're permitted to.
