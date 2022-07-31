@@ -172,7 +172,7 @@ tail -n 1 -f "${path}${chan}/out" | while read -r line; do
 				send "$name: hosts: ${ophost[*]}"
 		;;
 		"${prefix}help")
-			send "$name: commands: coffee, tea, fortune, uptime, about, rr, coinflip, dice, uname, time, penis, hey, ping, test, 8ball, grep, op, deop, voice, devoice, help"
+			send "$name: commands: coffee, tea, fortune, uptime, about, rr, coinflip, dice, uname, time, penis, hey, ping, test, 8ball, grep, wgrep, sendops, op, deop, voice, devoice, help, quit"
 		;;
 		"${prefix}penis")
 			arg=$(printf '%s\n' "$line" | cut -d ' ' -f 4-)
@@ -297,10 +297,12 @@ tail -n 1 -f "${path}${chan}/out" | while read -r line; do
 				send "$name is not in the sudoers file. This incident will be reported."
 			fi
 		;;
-		"${prefix}q")
+		"${prefix}quit")
 			hostcheck "$name"
 			if [ $? -eq 0 ]; then
-				send "/l Recieved 'q' command from $name."
+				send "NO! DON'T KILL ME!"
+				send "/l Recieved 'quit' command from $name."
+				exit
 			else
 				send "$name is not in the sudoers file. This incident will be reported."
 			fi
