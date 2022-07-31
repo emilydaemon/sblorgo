@@ -30,8 +30,8 @@ path="$HOME/sblorgo/fifo/${server}/"
 prefix=":"
 
 # obviously change these!!!
-opers=("jornmann", "speedie", "gabubu", "mohamad")
-ophost=("user/jornmann", "user/speedie", "user/gabubu", "user/damaj301damaj")
+opers=("jornmann", "nnamnroj", "speedie", "gabubu", "mohamad")
+ophost=("user/jornmann", "user/jornmann", "user/speedie", "user/gabubu", "user/damaj301damaj")
 
 printf "\
       '||     '||\`\n\
@@ -117,7 +117,6 @@ tail -n 1 -f "${path}${chan}/out" | while read -r line; do
 	name=$(printf '%s\n' "$line" | cut -d ' ' -f 2 | tr -d '<>')
 	if [ "$name" = "jorngirl" ]; then
 		if [ "${cmd:0:1}" = "${prefix}" ]; then
-			send "Fuck off."
 			cmd="poop"
 		fi
 	fi
